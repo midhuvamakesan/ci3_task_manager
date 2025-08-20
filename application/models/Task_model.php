@@ -3,27 +3,7 @@ class Task_model extends CI_Model {
 
     private $table = 'tasks';
 
-    /*public function get_all($filters = []) {
-        $this->db->where('deleted_at IS NULL'); // exclude soft-deleted
-
-        if (!empty($filters['status'])) {
-            $this->db->where('status', $filters['status']);
-        }
-        if (!empty($filters['priority'])) {
-            $this->db->where('priority', $filters['priority']);
-        }
-        if (!empty($filters['due_date_from'])) {
-            $this->db->where('due_date >=', $filters['due_date_from']);
-        }
-        if (!empty($filters['due_date_to'])) {
-            $this->db->where('due_date <=', $filters['due_date_to']);
-        }
-        if (!empty($filters['keyword'])) {
-            $this->db->like('title', $filters['keyword']);
-        }
-
-        return $this->db->get($this->table)->result_array();
-    }*/
+   
 
     public function get_all($filters = [], $limit = 10, $offset = 0, $sort_by = 'created_at', $sort_dir = 'DESC') {
         $this->db->from($this->table);
@@ -51,6 +31,7 @@ class Task_model extends CI_Model {
             $this->db->like('title', $filters['keyword']);
         }
 
+        /* Fetch Tags */
         $this->db->select('tasks.*');
         // tag filter (by tag id or name)
         $tagJoin = false;
@@ -66,7 +47,7 @@ class Task_model extends CI_Model {
         }
 
 
-        // Count before limit (for pagination)
+        // Count for pagination
         $count_query = clone $this->db;
         $total = $count_query->count_all_results('', FALSE);
 
@@ -93,7 +74,7 @@ class Task_model extends CI_Model {
         return ['tasks' => $tasks, 'total' => $total];
     }
 
-
+    // Fetch Task with tags by Task ID 
     public function get($id) {
          $row = $this->db->where('id', $id)
             ->where('deleted_at IS NULL', null, false)
@@ -106,6 +87,7 @@ class Task_model extends CI_Model {
 
     }
 
+    // Insert New Task 
     public function insert($data) {
         $data['created_at'] = date('Y-m-d H:i:s');
         $data['updated_at'] = date('Y-m-d H:i:s');
@@ -113,6 +95,7 @@ class Task_model extends CI_Model {
         return $this->db->insert_id();
     }
 
+    // Update existing Task
     public function update($id, $data) {
         $data['updated_at'] = date('Y-m-d H:i:s');
         return $this->db->where('id', $id)
@@ -120,6 +103,7 @@ class Task_model extends CI_Model {
             ->update($this->table, $data);
     }
 
+    // Soft delete Existing Task with update statement
     public function delete($id) {
         return $this->db->where('id', $id)
             ->update($this->table, [
@@ -128,6 +112,7 @@ class Task_model extends CI_Model {
             ]);
     }
 
+    // Restore Delete
     public function restore($id) {
         return $this->db->where('id', $id)
             ->update($this->table, ['deleted_at' => null, 'updated_at' => date('Y-m-d H:i:s')]);

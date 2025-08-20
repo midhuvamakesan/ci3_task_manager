@@ -1,6 +1,7 @@
+
 document.addEventListener('DOMContentLoaded', function () {
     const API_URL = "http://localhost/ci3_task_manager/api/tasks";
-    const API_TOKEN = "mysecrettoken123"; // must match backend token
+    const API_TOKEN = "mytoken2025"; // must match backend token
 
     const taskTableBody = document.querySelector("#taskTable tbody");
     const pagination = document.getElementById("pagination");

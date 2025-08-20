@@ -3,12 +3,13 @@ class Tag_model extends CI_Model
 {
     private $table = 'tags';
 
+    // Get all tasks
     public function get_all()
     {
         return $this->db->get($this->table)->result_array();
     }
-
-    public function find($id)
+    
+    public function get_by_id($id)
     {
         return $this->db->where('id', $id)->get($this->table)->row_array();
     }

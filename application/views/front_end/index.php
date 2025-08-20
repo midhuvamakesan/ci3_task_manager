@@ -15,7 +15,7 @@
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#taskModal">+ Add Task</button>
   </div>
 
-  <!-- Filters -->
+  <!-- Filter Section -->
   <div class="card shadow-sm p-3 mb-4">
     <form id="filterForm" class="row g-3 align-items-end">
       <div class="col-md-3">

@@ -58,7 +58,8 @@ A simple Task Management application built with CodeIgniter 3, supporting tasks 
 
 # API
 
-Token Authentication: Authorization: Bearer mysecrettoken123
+
+Token Authentication: Authorization: Bearer mytoken2025
 
 Method	    Endpoint	                   Description
 GET	       /api/tasks	                    List tasks
@@ -78,13 +79,12 @@ GET	        /api/tags/{id}	                  Tag details
 PUT	        /api/tags/update/{id}	          Update tag
 DELETE	     /api/tags/delete/{id}	          Delete tag
 
-### Authentication:
-All API requests require a Bearer token in the headers:
+
 
 ## Frontend JS Example (Axios)
 const api = axios.create({
     baseURL: 'http://localhost/ci3_task_manager/api/tasks',
-    headers: { Authorization: 'Bearer mysecrettoken123' }
+    headers: { Authorization: 'Bearer mytoken2025' }
 });
 
 ## Toggle task status
@@ -108,4 +108,6 @@ const api = axios.create({
 Contact
 ***************
    Midhu Vamakesan
+
    midhuvamakesan13@gmail.com
+

@@ -14,9 +14,10 @@ class Tags extends CI_Controller
         echo json_encode($tags);
     }
 
+    // Display Tag by ID
     public function show($id)
     {
-        $tag = $this->Tag_model->find($id);
+        $tag = $this->Tag_model->get_by_id($id);
         if ($tag) {
             echo json_encode($tag);
         } else {
@@ -25,6 +26,7 @@ class Tags extends CI_Controller
         }
     }
 
+    // Create New tag
     public function store()
     {
         $data = json_decode(file_get_contents('php://input'), true);
@@ -38,6 +40,8 @@ class Tags extends CI_Controller
         echo json_encode(['id' => $id, 'message' => 'Tag created']);
     }
 
+
+    // Update existing tag
     public function update($id)
     {
         $data = json_decode(file_get_contents('php://input'), true);
@@ -45,6 +49,7 @@ class Tags extends CI_Controller
         echo json_encode(['message' => 'Tag updated']);
     }
 
+    // Delete Existing tag
     public function delete($id)
     {
         $this->Tag_model->delete_tag($id);

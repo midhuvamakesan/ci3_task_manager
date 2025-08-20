@@ -2,8 +2,8 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Tasks extends CI_Controller {
+    private $token = 'mytoken2025'; // Hard code token for Authorization: Bearer 
 
-    private $token = 'mytoken2025'; // Token for Authorization: Bearer <token>
 
     public function __construct() {
         parent::__construct();
@@ -11,7 +11,9 @@ class Tasks extends CI_Controller {
         $this->load->model('Tag_model',  'tag');
         $this->output->set_content_type('application/json');
 
-        // Token auth for all endpoints 
+
+        // Checks the Authentication
+
         $method = $this->input->method(TRUE);
         if ($method !== 'OPTIONS') {
             $headers = $this->input->request_headers();
@@ -37,14 +39,16 @@ class Tasks extends CI_Controller {
             }
         }
 
-        // Enum data check
+
+        // Enum data validation
+
         $statuses  = ['pending', 'in_progress', 'completed'];
         $priorities= ['low', 'medium', 'high'];
 
         if (!empty($data['status'])   && !in_array($data['status'], $statuses))     $errors['status'] = 'Invalid status';
         if (!empty($data['priority']) && !in_array($data['priority'], $priorities)) $errors['priority'] = 'Invalid priority';
 
-        // Date format (YYYY-MM-DD)
+        // Date format (YYYY-MM-DD) validation
         if (isset($data['due_date']) && $data['due_date'] !== null && $data['due_date'] !== '') {
             if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $data['due_date'])) {
                 $errors['due_date'] = 'Invalid date format (YYYY-MM-DD)';
@@ -54,7 +58,9 @@ class Tasks extends CI_Controller {
         return $errors;
     }
 
-    /* ------------ GET all the tasks or List the Task------------ */
+
+    /* ------------ List out all Tasks using GET ------------ */
+
     public function index() {
         $filters = $this->input->get();
         $page    = isset($filters['page']) ? max(1, (int)$filters['page']) : 1;
@@ -75,7 +81,9 @@ class Tasks extends CI_Controller {
             ]));
     }
 
-    /* ------------ GET task by Id (Single data fetch) ------------ */
+
+    /* ------------  Fetch the task by id(Single data) using GET ------------ */
+
     public function show($id) {
         $task = $this->task->get($id);
         if ($task) {
@@ -87,10 +95,13 @@ class Tasks extends CI_Controller {
         }
     }
 
-    /* ------------Create New Task ------------ */
+
+    /* ------------ Create new Task or Store Task------------ */
+
     public function store() {
         $data = json_decode($this->input->raw_input_stream, true) ?: [];
 
+        // Validation Check
         $errors = $this->validate_task($data, false);
         if (!empty($errors)) {
             $this->output->set_status_header(422)
@@ -98,27 +109,56 @@ class Tasks extends CI_Controller {
             return;
         }
 
-        // normalize optional fields
+        // Date Null
         if (!isset($data['due_date']) || $data['due_date'] === '') $data['due_date'] = null;
 
-        // pluck tags, can be tag IDs or tag names
         $tag_ids = [];
         if (!empty($data['tags'])) {
-            // Accept either ["bug","urgent"] or [1,3]
+            $numeric_tags = [];
+            $new_tags = [];
+
+            // Separate numeric IDs and new tag names
             foreach ($data['tags'] as $tg) {
                 if (is_numeric($tg)) {
-                    $tag_ids[] = (int)$tg;
+                    $numeric_tags[] = (int)$tg;
                 } else {
-                    $tag_ids[] = $this->tag->get_or_create_by_name(trim($tg));
+                    $new_tags[] = trim($tg);
                 }
             }
+
+            // Validate numeric tag IDs exist in database
+            if (!empty($numeric_tags)) {
+                $this->db->where_in('id', $numeric_tags);
+                $existing_tags = $this->db->get('tags')->result_array();
+                $existing_tag_ids = array_column($existing_tags, 'id');
+
+                $invalid_tags = array_diff($numeric_tags, $existing_tag_ids);
+                if (!empty($invalid_tags)) {
+                    $this->output->set_status_header(400)
+                        ->set_output(json_encode([
+                            'status' => 400,
+                            'message' => 'Invalid tag IDs: ' . implode(',', $invalid_tags)
+                        ]));
+                    return;
+                }
+                $tag_ids = array_merge($tag_ids, $existing_tag_ids);
+            }
+
+            // Create new tags if any
+            foreach ($new_tags as $tag_name) {
+                $tag_ids[] = $this->tag->get_or_create_by_name($tag_name);
+            }
         }
+
         unset($data['tags']);
 
+        // Insert the task
         $id = $this->task->insert($data);
+
+        // Sync tags
         $this->task->sync_tags($id, $tag_ids);
 
-        // audit log
+        // Insert into task logs
         $this->db->insert('task_logs', [
             'task_id'    => $id,
             'action'     => 'create',
@@ -130,10 +170,12 @@ class Tasks extends CI_Controller {
             ->set_output(json_encode(['status' => 201, 'message' => 'Task created', 'id' => $id]));
     }
 
-    /* ------------ PUT /tasks/{id} ------------ */
+
+    /* ------------ Update the task using PUT method------------ */
     public function update($id) {
         $data = json_decode($this->input->raw_input_stream, true) ?: [];
 
+        // Validation
         $errors = $this->validate_task($data, true);
         if (!empty($errors)) {
             $this->output->set_status_header(422)
@@ -141,23 +183,54 @@ class Tasks extends CI_Controller {
             return;
         }
 
+        // Ensure due_date is null if empty
         if (array_key_exists('due_date', $data) && $data['due_date'] === '') $data['due_date'] = null;
 
-        // tags sync if provided
+        // Tags processing
         $tagsProvided = array_key_exists('tags', $data);
         $tag_ids = [];
         if ($tagsProvided) {
+            $numeric_tags = [];
+            $new_tags = [];
+
             foreach ($data['tags'] as $tg) {
-                if (is_numeric($tg)) $tag_ids[] = (int)$tg;
-                else $tag_ids[] = $this->tag->get_or_create_by_name(trim($tg));
+                if (is_numeric($tg)) $numeric_tags[] = (int)$tg;
+                else $new_tags[] = trim($tg);
             }
+
+            // Validate numeric tags exist
+            if (!empty($numeric_tags)) {
+                $this->db->where_in('id', $numeric_tags);
+                $existing_tags = $this->db->get('tags')->result_array();
+                $existing_tag_ids = array_column($existing_tags, 'id');
+
+                $invalid_tags = array_diff($numeric_tags, $existing_tag_ids);
+                if (!empty($invalid_tags)) {
+                    $this->output->set_status_header(400)
+                        ->set_output(json_encode([
+                            'status' => 400,
+                            'message' => 'Invalid tag IDs: ' . implode(',', $invalid_tags)
+                        ]));
+                    return;
+                }
+
+                $tag_ids = array_merge($tag_ids, $existing_tag_ids);
+            }
+
+            // Create new tags if provided
+            foreach ($new_tags as $tag_name) {
+                $tag_ids[] = $this->tag->get_or_create_by_name($tag_name);
+            }
+
             unset($data['tags']);
         }
 
-        $ok = $this->task->update($id, $data);
-        if ($ok) {
+        // Update task
+        $updated = $this->task->update($id, $data);
+        if ($updated) {
             if ($tagsProvided) $this->task->sync_tags($id, $tag_ids);
 
+            // Task logs
             $this->db->insert('task_logs', [
                 'task_id'    => $id,
                 'action'     => 'update',
@@ -173,14 +246,16 @@ class Tasks extends CI_Controller {
         }
     }
 
-    /* ------------ DELETE /tasks/{id} (soft) ------------ */
+
+    /* ------------ Delete task with ID (Soft delete) Using DELETE ------------ */
     public function delete($id) {
-        $ok = $this->task->delete($id);
-        if ($ok) {
+        $deleted = $this->task->delete($id);
+        // Insert into task logs table with delete action
+        if ($deleted) {
             $this->db->insert('task_logs', [
                 'task_id'    => $id,
                 'action'     => 'delete',
-                'changes'    => null,
+                'changes'    => 'Soft deleted the Task',
                 'created_at' => date('Y-m-d H:i:s')
             ]);
             $this->output->set_status_header(200)
@@ -191,7 +266,7 @@ class Tasks extends CI_Controller {
         }
     }
 
-    /* ------------ PATCH/POST /tasks/{id}/restore ------------ */
+    /* ------------ restore the soft delete using PATCH------------ */
     public function restore($id) {
         $method = $this->input->method(TRUE);
         if (!in_array($method, ['PATCH','POST'])) {
@@ -200,12 +275,13 @@ class Tasks extends CI_Controller {
             return;
         }
 
-        $ok = $this->task->restore($id);
-        if ($ok) {
+        $restored = $this->task->restore($id);
+        // Insert into task logs table with Restore action
+        if ($restored) {
             $this->db->insert('task_logs', [
                 'task_id'    => $id,
                 'action'     => 'restore',
-                'changes'    => null,
+                'changes'    => 'Restore soft delete',
                 'created_at' => date('Y-m-d H:i:s')
             ]);
             $this->output->set_status_header(200)
@@ -216,7 +292,7 @@ class Tasks extends CI_Controller {
         }
     }
 
-    /* ------------ PATCH/POST /tasks/{id}/toggle-status ------------ */
+    /* ------------ Toggle-status using PATCH/POST ------------ */
     public function toggle_status($id) {
         $method = $this->input->method(TRUE);
         if (!in_array($method, ['PATCH','POST'])) {
@@ -237,7 +313,7 @@ class Tasks extends CI_Controller {
         $next = $flow[(($pos === false ? -1 : $pos) + 1) % count($flow)];
 
         $this->task->update($id, ['status' => $next]);
-
+        // Insert into task logs table with toggle status
         $this->db->insert('task_logs', [
             'task_id'    => $id,
             'action'     => 'toggle_status',
