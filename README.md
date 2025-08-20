@@ -96,23 +96,24 @@ API
 
 Token Authentication: Authorization: Bearer mysecrettoken123
 
-Method	Endpoint	Description
-GET	/api/tasks	List tasks
-POST	/api/tasks	Create task
-GET	/api/tasks/{id}	Get task details
-PUT	/api/tasks/{id}	Update task
-DELETE	/api/tasks/{id}	Delete task
-PATCH	/api/tasks/{id}/toggle-status	Cycle task status
-PATCH	/api/tasks/{id}/restore	Restore deleted task
+Method	Endpoint	     								Description
+GET	   /api/tasks	  								List tasks
+POST	   /api/tasks	  								Create task
+GET	  /api/tasks/{id}	  							Get task details
+PUT	  /api/tasks/{id}								Update task
+DELETE	/api/tasks/{id}	     					Delete task
+PATCH 	/api/tasks/{id}/toggle-status	     	Cycle task status
+PATCH	  /api/tasks/{id}/restore					Restore deleted task
 
 Tags API:
 
-Method	Endpoint	Description
-GET	/api/tags	List tags
-POST	/api/tags/store	Create tag
-GET	/api/tags/{id}	Tag details
-PUT	/api/tags/update/{id}	Update tag
-DELETE	/api/tags/delete/{id}	Delete tag
+Method	Endpoint							Description
+GET	/api/tags							List tags
+POST	/api/tags/store					Create tag
+GET	/api/tags/{id}						Tag details
+PUT	/api/tags/update/{id}			Update tag
+DELETE	/api/tags/delete/{id}		Delete tag
+
 Frontend JS Example (Axios)
 const api = axios.create({
     baseURL: 'http://localhost/ci3_task_manager/api/tasks',
