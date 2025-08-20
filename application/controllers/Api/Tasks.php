@@ -3,7 +3,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Tasks extends CI_Controller {
 
-    private $token = 'mysecrettoken123'; // Token for Authorization: Bearer <token>
+    private $token = 'mytoken2025'; // Token for Authorization: Bearer <token>
 
     public function __construct() {
         parent::__construct();
@@ -11,7 +11,7 @@ class Tasks extends CI_Controller {
         $this->load->model('Tag_model',  'tag');
         $this->output->set_content_type('application/json');
 
-        // Simple token auth for all endpoints (skip OPTIONS)
+        // Token auth for all endpoints 
         $method = $this->input->method(TRUE);
         if ($method !== 'OPTIONS') {
             $headers = $this->input->request_headers();
@@ -28,7 +28,7 @@ class Tasks extends CI_Controller {
     private function validate_task($data, $is_update = false) {
         $errors = [];
 
-        // Required: title (create), optional in update but if present must not be empty.
+        // Required: Title only in Create
         if (!$is_update) {
             if (empty($data['title'])) $errors['title'] = 'Title is required';
         } else {
@@ -37,7 +37,7 @@ class Tasks extends CI_Controller {
             }
         }
 
-        // Enumerations
+        // Enum data check
         $statuses  = ['pending', 'in_progress', 'completed'];
         $priorities= ['low', 'medium', 'high'];
 
@@ -54,7 +54,7 @@ class Tasks extends CI_Controller {
         return $errors;
     }
 
-    /* ------------ GET /tasks ------------ */
+    /* ------------ GET all the tasks or List the Task------------ */
     public function index() {
         $filters = $this->input->get();
         $page    = isset($filters['page']) ? max(1, (int)$filters['page']) : 1;
@@ -75,7 +75,7 @@ class Tasks extends CI_Controller {
             ]));
     }
 
-    /* ------------ GET /tasks/{id} ------------ */
+    /* ------------ GET task by Id (Single data fetch) ------------ */
     public function show($id) {
         $task = $this->task->get($id);
         if ($task) {
@@ -87,7 +87,7 @@ class Tasks extends CI_Controller {
         }
     }
 
-    /* ------------ POST /tasks ------------ */
+    /* ------------Create New Task ------------ */
     public function store() {
         $data = json_decode($this->input->raw_input_stream, true) ?: [];
 
